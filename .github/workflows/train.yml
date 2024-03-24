@@ -1,4 +1,4 @@
-name: Data Scraping
+name: Model Training
 
 on:
   workflow_dispatch:

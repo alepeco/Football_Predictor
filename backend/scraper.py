@@ -287,7 +287,3 @@ data_dict = combined_df.to_dict("records")  # Convert DataFrame to list of dicti
 collection.insert_many(data_dict)
 
 
-# Now, combined_df includes both the team's and their opponent's features for each match
-
-print(combined_df)
-

@@ -21,4 +21,4 @@ jobs:
       - name: Run scraper
         env:
           MONGODB_CONN_STR: ${{ secrets.MONGODB_CONN_STR}} # Use the secret
-        run: python backend.scraper.py
+        run: python backend/scraper.py

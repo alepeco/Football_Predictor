@@ -4,7 +4,9 @@ from sklearn.metrics import accuracy_score, classification_report
 import pandas as pd
 from pymongo import MongoClient
 import pickle
+from dotenv import load_dotenv
 import os
+load_dotenv()
 
 # MongoDB connection string
 conn_string = os.getenv('MONGODB_CONN_STR')

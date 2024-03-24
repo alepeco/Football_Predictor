@@ -4,6 +4,8 @@ from bs4 import BeautifulSoup
 from pymongo import MongoClient
 import pandas as pd
 import os
+from dotenv import load_dotenv
+load_dotenv()
 
 def collect_team_data(match_logs_url, market_value_url, team_name):
     # Headers to mimic a browser request
@@ -280,10 +282,13 @@ client = MongoClient(conn_string)
 db = client['mdmmongodb-ale']  # Replace 'your_database_name' with your actual database name
 collection = db['FootballPredictor']  # Replace 'your_collection_name' with your actual collection name
 
-# Assuming 'combined_df' is your DataFrame
+# Clear the existing data in the collection
+collection.delete_many({})
+
+# Assuming 'combined_df' is your DataFrame with the new data
 data_dict = combined_df.to_dict("records")  # Convert DataFrame to list of dictionaries
 
-# Insert data into the collection
+# Insert new data into the collection
 collection.insert_many(data_dict)
 
 

@@ -81,6 +81,8 @@ import pandas as pd
 from pymongo import MongoClient
 import pickle
 import os
+from dotenv import load_dotenv
+load_dotenv()
 
 # Load model function
 def load_model():

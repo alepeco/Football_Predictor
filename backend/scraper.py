@@ -3,6 +3,7 @@ import requests
 from bs4 import BeautifulSoup
 from pymongo import MongoClient
 import pandas as pd
+import os
 
 def collect_team_data(match_logs_url, market_value_url, team_name):
     # Headers to mimic a browser request
@@ -270,7 +271,7 @@ opponent_features.columns = ['Date', 'Opponent', 'Opponent_TotalGF', 'Opponent_T
 combined_df = pd.merge(combined_df, opponent_features, on=['Date', 'Opponent'])
 
 # Your MongoDB connection string
-conn_string = "mongodb+srv://mongodb:<password>@mdmmongodb-ale.mongocluster.cosmos.azure.com/?tls=true&authMechanism=SCRAM-SHA-256&retrywrites=false&maxIdleTimeMS=120000"
+conn_string = os.getenv('MONGODB_CONN_STR')
 
 # Replace <user> and <password> with your actual MongoDB credentials
 client = MongoClient(conn_string)

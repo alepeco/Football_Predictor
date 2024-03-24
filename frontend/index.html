@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Match Outcome Predictor</title>
+</head>
+<body>
+    <h2>Match Outcome Predictor</h2>
+    <form id="predictionForm">
+
+        <label for="team_a_name">Select Team A:</label>
+        <select id="team_a_name" name="team_a_name">
+
+        </select>
+
+        <label for="team_b_name">Select Team B:</label>
+        <select id="team_b_name" name="team_b_name">
+            
+        </select>
+
+        <label for="venue">Venue:</label>
+        <select id="venue" name="venue">
+            <option value="1">Team A Home</option>
+            <option value="0">Team B Home</option>
+        </select>
+
+        <button type="button" onclick="makePrediction()">Predict Outcome</button>
+    </form>
+
+    <div id="predictionResult"></div>
+
+    <script src="script.js"></script>
+</body>
+</html>

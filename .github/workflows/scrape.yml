@@ -1,0 +1,22 @@
+name: Data Scraping
+
+on:
+  schedule:
+    - cron: '0 0 * * *' # Runs at midnight UTC every day. Adjust the cron schedule as needed.
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: '3.12'
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+      - name: Run scraper
+        env:
+          MONGODB_CONN_STR: ${{ secrets.MONGODB_CONN_STR}} # Use the secret
+        run: python scraper.py

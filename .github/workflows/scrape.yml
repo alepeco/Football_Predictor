@@ -1,6 +1,7 @@
 name: Data Scraping
 
 on:
+  workflow_dispatch:
   schedule:
     - cron: '0 0 * * *' # Runs at midnight UTC every day. Adjust the cron schedule as needed.
 

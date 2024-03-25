@@ -39,7 +39,7 @@ try:
                     suffix = newSuffix
 
     suffix += 1
-    container_name = str("FootballPredictor-model-" + str(suffix))
+    container_name = str("FootballPredictorModel-" + str(suffix))
     print("new container name: ")
     print(container_name)
 

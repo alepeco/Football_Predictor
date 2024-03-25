@@ -20,9 +20,9 @@ try:
     blob_service_client = BlobServiceClient.from_connection_string(args.connection)
 
     account_url = "https://pecorale.blob.core.windows.net"
-    default_credential = DefaultAzureCredential()
+    # default_credential = DefaultAzureCredential()
     # Create the BlobServiceClient object
-    blob_service_client = BlobServiceClient(account_url, credential=default_credential)
+    # blob_service_client = BlobServiceClient(account_url, credential=default_credential)
 
     exists = False
     containers = blob_service_client.list_containers(include_metadata=True)

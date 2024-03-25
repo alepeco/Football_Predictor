@@ -19,7 +19,11 @@ jobs:
           grep -vE "pywin32" requirements.txt > requirements_no_win32.txt
           pip install -r requirements_no_win32.txt
       - name: Train Model and Save
-        run: python model/model.py "${{ secrets.MONGODB_CONN_STR }}"
+        env:
+          MONGODB_CONN_STR: ${{ secrets.MONGODB_CONN_STR }} # Use the secret
+        run: python model/model.py
     
       - name: Upload Model to Azure Blob Storage
-        run: python model/save.py -c "${{ secrets.AZURE_STORAGE_CONNECTION_STRING }}"
+        env:
+          MONGODB_CONN_STR: ${{ secrets.AZURE_STORAGE_CONNECTION_STRING }} # Use the secret
+        run: python model/save.py -c

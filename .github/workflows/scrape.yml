@@ -20,5 +20,5 @@ jobs:
           pip install -r requirements_no_win32.txt
       - name: Run scraper
         env:
-          MONGODB_CONN_STR: ${{ secrets.MONGODB_CONN_STR}} # Use the secret
+          MONGODB_CONN_STR: ${{ secrets.MONGODB_CONN_STR }} # Use the secret
         run: python model/scraper.py

@@ -80,7 +80,6 @@ def collect_team_data(match_logs_url, market_value_url, team_name):
     
     return dfTeam
 
-# Example usage:
 Barcelona = collect_team_data(
     'https://fbref.com/en/squads/206d90db/Barcelona-Stats',
     'https://www.transfermarkt.ch/fc-barcelona/startseite/verein/131',

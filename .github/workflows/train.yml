@@ -18,7 +18,8 @@ jobs:
         run: |
           grep -vE "pywin32" requirements.txt > requirements_no_win32.txt
           pip install -r requirements_no_win32.txt
-      - name: Run scraper
-        env:
-          MONGODB_CONN_STR: ${{ secrets.MONGODB_CONN_STR}} # Use the secret
-        run: python backend/model_training.py
+      - name: Train Model and Save
+        run: python model/model.py -u "${{ secrets.MONGODB_CONN_STRING }}"
+    
+      - name: Upload Model to Azure Blob Storage
+        run: python model/save.py -c "${{ secrets.AZURE_STORAGE_CONNECTION_STRING }}"

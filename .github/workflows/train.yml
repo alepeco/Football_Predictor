@@ -24,6 +24,4 @@ jobs:
         run: python model/model.py
     
       - name: Upload Model to Azure Blob Storage
-        env:
-          MONGODB_CONN_STR: ${{ secrets.AZURE_STORAGE_CONNECTION_STRING }} # Use the secret
-        run: python model/save.py -c
+        run: python model/save.py -c "${{ secrets.AZURE_STORAGE_CONNECTION_STRING }}"

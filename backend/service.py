@@ -1,110 +1,164 @@
-# python -m flask --debug --app service run (works also in PowerShell)
-
-import datetime
 import os
-import pickle
-from pathlib import Path
-
 import pandas as pd
-from azure.storage.blob import BlobServiceClient
-from flask import Flask, jsonify, request, send_file
+from pymongo import MongoClient
+from azure.storage.blob import BlobServiceClient, BlobClient
+import pickle
+from flask import Flask, jsonify, request
 from flask_cors import CORS
+from pathlib import Path
+from flask.helpers import send_file
+import re  # Added for regex matching
+from flask import send_from_directory
 
-# init app, load model from storage
-print("*** Init and load model ***")
-if 'AZURE_STORAGE_CONNECTION_STRING' in os.environ:
-    azureStorageConnectionString = os.environ['AZURE_STORAGE_CONNECTION_STRING']
-    blob_service_client = BlobServiceClient.from_connection_string(azureStorageConnectionString)
+def load_model_from_blob():
+    connection_string = os.getenv('AZURE_STORAGE_CONNECTION_STRING')
+    if connection_string is None:
+        raise Exception("Azure Storage Connection String is not set in environment variables.")
+    
+    blob_service_client = BlobServiceClient.from_connection_string(connection_string)
+    
+    container_prefix = "footballpredictormodel"
+    latest_suffix = -1
+    latest_container = None
 
-    print("fetching blob containers...")
-    containers = blob_service_client.list_containers(include_metadata=True)
+    # Iterate through all containers and find the one with the highest suffix
+    containers = blob_service_client.list_containers(name_starts_with=container_prefix)
     for container in containers:
-        existingContainerName = container['name']
-        print("checking container " + existingContainerName)
-        if existingContainerName.startswith("hikeplanner-model"):
-            parts = existingContainerName.split("-")
-            print(parts)
-            suffix = 1
-            if (len(parts) == 3):
-                newSuffix = int(parts[-1])
-                if (newSuffix > suffix):
-                    suffix = newSuffix
+        # Use regex to find suffix number
+        match = re.search(f"{container_prefix}(\d+)", container['name'])
+        if match:
+            suffix = int(match.group(1))
+            if suffix > latest_suffix:
+                latest_suffix = suffix
+                latest_container = container['name']
 
-    container_client = blob_service_client.get_container_client("hikeplanner-model-" + str(suffix))
-    blob_list = container_client.list_blobs()
-    for blob in blob_list:
-        print("\t" + blob.name)
+    if latest_container is None:
+        raise Exception("No model container found.")
 
-    # Download the blob to a local file
-    Path("../model").mkdir(parents=True, exist_ok=True)
-    download_file_path = os.path.join("../model", "GradientBoostingRegressor.pkl")
-    print("\nDownloading blob to \n\t" + download_file_path)
+    print(f"Latest model container: {latest_container}")
 
-    with open(file=download_file_path, mode="wb") as download_file:
-         download_file.write(container_client.download_blob(blob.name).readall())
+    blob_name = "model.pkl"
+    blob_client = blob_service_client.get_blob_client(container=latest_container, blob=blob_name)
 
-else:
-    print("CANNOT ACCESS AZURE BLOB STORAGE - Please set connection string as env variable")
-    print(os.environ)
-    print("AZURE_STORAGE_CONNECTION_STRING not set")    
+    # Construct the local path to save the downloaded model
+    download_file_path = "model/model.pkl"
+    print(f"Downloading model from Blob Storage: {latest_container}/{blob_name} to {download_file_path}")
 
-file_path = Path(".", "../model/", "GradientBoostingRegressor.pkl")
-with open(file_path, 'rb') as fid:
-    model = pickle.load(fid)
+    with open(download_file_path, "wb") as download_file:
+        download_file.write(blob_client.download_blob().readall())
 
-print("*** Sample calculation with model ***")
-def din33466(uphill, downhill, distance):
-    km = distance / 1000.0
-    print(km)
-    vertical = downhill / 500.0 + uphill / 300.0
-    print(vertical)
-    horizontal = km / 4.0
-    print(horizontal)
-    return 3600.0 * (min(vertical, horizontal) / 2 + max(vertical, horizontal))
+    # Load the model from the local file
+    with open(download_file_path, 'rb') as model_file:
+        model = pickle.load(model_file)
+    
+    return model
 
-def sac(uphill, downhill, distance):
-    km = distance / 1000.0
-    return 3600.0 * (uphill/400.0 + km /4.0)
+# MongoDB connection and other Flask setup code goes here
 
-downhill = 300
-uphill = 700
-length = 10000
-max_elevation = 1200
-print("Downhill: " + str(downhill))
-print("Uphill: " + str(uphill))
-print("Length: " + str(length))
-demoinput = [[downhill,uphill,length,max_elevation]]
-demodf = pd.DataFrame(columns=['downhill', 'uphill', 'length_3d', 'max_elevation'], data=demoinput)
-demooutput = model.predict(demodf)
-time = demooutput[0]
-print("Our Model: " + str(datetime.timedelta(seconds=time)))
-print("DIN33466: " + str(datetime.timedelta(seconds=din33466(uphill=uphill, downhill=downhill, distance=length))))
-print("SAC: " + str(datetime.timedelta(seconds=sac(uphill=uphill, downhill=downhill, distance=length))))
-
-print("*** Init Flask App ***")
 app = Flask(__name__)
-cors = CORS(app)
-app = Flask(__name__, static_url_path='/', static_folder='../frontend/build')
+CORS(app)
+app = Flask(__name__, static_url_path='/', static_folder='../frontend')
 
+conn_string = os.getenv('MONGODB_CONN_STR')
+
+def fetch_team_data(team_name):
+    client = MongoClient(conn_string)
+    db = client['mdmmongodb-ale']
+    collection = db['FootballPredictor']
+    team_data = list(collection.find({"Team": team_name}).sort([("Date", -1)]).limit(1))
+    if team_data:
+        return pd.DataFrame(team_data)
+    else:
+        return pd.DataFrame()
+
+def predict_match_outcome(team_a_name, team_b_name, upcoming_match_venue):
+    try:
+        model = load_model_from_blob()
+        print("*** Model loaded ***")
+    except Exception as e:
+        print(f"Failed to load model from Blob Storage: {e}")
+    # Attempt to load model locally if Azure Blob Storage is not accessible
+    try:
+        with open('model/model.pkl', 'rb') as file:
+            model = pickle.load(file)
+        print("*** Model loaded locally ***")
+    except Exception as e:
+        print(f"Failed to load model locally: {e}")
+        raise
+    model = load_model_from_blob()
+    print("*** Model loaded ***")
+    
+    # Fetch the last record for both teams
+    team_a_df = fetch_team_data(team_a_name)
+    team_b_df = fetch_team_data(team_b_name)
+    
+    if team_a_df.empty or team_b_df.empty:
+        return "Data for one or both teams not found."
+    
+    team_a_last_record = team_a_df.iloc[-1]
+    team_b_last_record = team_b_df.iloc[-1]
+    
+    # Prepare the feature vector for prediction
+    features_for_prediction = pd.DataFrame([{
+        'Total_GF': team_a_last_record['Total_GF'],
+        'Total_GA': team_a_last_record['Total_GA'],
+        'PpG': team_a_last_record['PpG'],
+        'Venue': upcoming_match_venue,
+        'cum_points': team_a_last_record['cum_points'],
+        'League Position': team_a_last_record['League Position'],
+        'pointsLast3': team_a_last_record['pointsLast3'],
+        'avgGF': team_a_last_record['avgGF'],
+        'avgGA': team_a_last_record['avgGA'],
+        'pointsLastGame': team_a_last_record['pointsLastGame'],
+        'GDlastGame': team_a_last_record['GDlastGame'],
+        'Market Value': team_a_last_record['Market Value'],
+        'Opponent_TotalGF': team_b_last_record['Total_GF'],
+        'Opponent_TotalGA': team_b_last_record['Total_GA'],
+        'OpponentPpG': team_b_last_record['PpG'],
+        'Opponent_cum_points': team_b_last_record['cum_points'],
+        'Opponent_League Position': team_b_last_record['League Position'],
+        'Opponent_pointsLast3': team_b_last_record['pointsLast3'],
+        'Opponent_avgGF': team_b_last_record['avgGF'],
+        'Opponent_avgGA': team_b_last_record['avgGA'],
+        'Opponent_pointsLastGame': team_b_last_record['pointsLastGame'],
+        'Opponent_GDlastGame': team_b_last_record['GDlastGame'],
+        'Opponent_Market value': team_b_last_record['Market Value']  # Ensure this is 'Market Value' if using the same column name for both teams
+}])
+    
+    predicted_points = model.predict(features_for_prediction)
+    predicted_probabilities = model.predict_proba(features_for_prediction)
+    
+    # Assuming the classes are ordered as [0, 1, 3] for [loss, draw, win]
+    # Extracting the highest probability as confidence
+    confidence = max(predicted_probabilities[0])
+    
+
+    # Translate predicted points to match outcome
+    match_outcome = "draw" if predicted_points == 1 else "win" if predicted_points == 3 else "loss"
+    # Convert confidence to a percentage string with 2 decimal places
+    confidence_percentage = f"{confidence * 100:.2f}%"
+    return f"The model predicts a {match_outcome} for {team_a_name} against {team_b_name}.", f"with a confidence level of {confidence_percentage}"
+    
 @app.route("/")
 def indexPage():
-     return send_file("../frontend/build/index.html")  
+    # Get the absolute path to your frontend folder
+    frontend_dir = os.path.abspath("./frontend")
+    # Serve index.html from the frontend directory
+    return send_from_directory(frontend_dir, "index.html")
 
-@app.route("/api/predict")
-def hello_world():
-    downhill = request.args.get('downhill', default = 0, type = int)
-    uphill = request.args.get('uphill', default = 0, type = int)
-    length = request.args.get('length', default = 0, type = int)
+@app.route("/predict", methods=["POST"])
+def predict():
+    # Fetch data from request
+    data = request.get_json()
+    team_a_name = data.get("team_a_name")
+    team_b_name = data.get("team_b_name")
+    venue = data.get("venue")
 
-    demoinput = [[downhill,uphill,length,0]]
-    demodf = pd.DataFrame(columns=['downhill', 'uphill', 'length_3d', 'max_elevation'], data=demoinput)
-    demooutput = model.predict(demodf)
-    time = demooutput[0]
+    # Prediction logic
+    # This should be adapted based on your prediction function
+    outcome, confidence = predict_match_outcome(team_a_name, team_b_name, venue)
+    
+    return jsonify({"outcome": outcome, "confidence": confidence})
 
-    return jsonify({
-        'time': str(datetime.timedelta(seconds=time)),
-        'din33466': str(datetime.timedelta(seconds=din33466(uphill=uphill, downhill=downhill, distance=length))),
-        'sac': str(datetime.timedelta(seconds=sac(uphill=uphill, downhill=downhill, distance=length)))
-        })
-
-
+if __name__ == "__main__":
+    app.run(debug=True)

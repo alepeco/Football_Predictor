@@ -1,32 +1,56 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Match Outcome Predictor</title>
+    <!-- Include Bootstrap CSS -->
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <style>
+        /* Additional styles to center the form on the page */
+        .container {
+            max-width: 500px;
+            margin-top: 50px;
+        }
+        h2 {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        form > * {
+            margin: 10px 0; /* Add some space around form elements */
+        }
+    </style>
 </head>
 <body>
-    <h2>Match Outcome Predictor</h2>
-    <form id="predictionForm">
+    <div class="container">
+        <h2>Match Outcome Predictor</h2>
+        <form id="predictionForm" class="form-group">
 
-        <label for="team_a_name">Select Team A:</label>
-        <select id="team_a_name" name="team_a_name">
+            <label for="team_a_name">Select Team A:</label>
+            <select id="team_a_name" name="team_a_name" class="form-control">
+                <!-- Teams options will be dynamically populated here -->
+            </select>
 
-        </select>
+            <label for="team_b_name">Select Team B:</label>
+            <select id="team_b_name" name="team_b_name" class="form-control">
+                <!-- Teams options will be dynamically populated here -->
+            </select>
 
-        <label for="team_b_name">Select Team B:</label>
-        <select id="team_b_name" name="team_b_name">
-            
-        </select>
+            <label for="venue">Venue:</label>
+            <select id="venue" name="venue" class="form-control">
+                <option value="1">Team A Home</option>
+                <option value="0">Team B Home</option>
+            </select>
 
-        <label for="venue">Venue:</label>
-        <select id="venue" name="venue">
-            <option value="1">Team A Home</option>
-            <option value="0">Team B Home</option>
-        </select>
-
-        <button type="button" onclick="makePrediction()">Predict Outcome</button>
-    </form>
-
-    <div id="predictionResult"></div>
+            <button type="button" onclick="makePrediction()" class="btn btn-primary btn-block">Predict Outcome</button>
+        </form>
+        <div id="loadingIcon" style="display: none; text-align: center;">
+            <div class="spinner-border" role="status">
+                <span class="sr-only">Loading...</span>
+            </div>
+        </div>
+        <div id="predictionResult"></div>
+    </div>
 
     <script src="script.js"></script>
 </body>

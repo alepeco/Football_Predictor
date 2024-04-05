@@ -1,5 +1,7 @@
 // script.js
 function makePrediction() {
+    document.getElementById('loadingIcon').style.display = 'block';
+    document.getElementById('predictionResult').innerHTML = '';
     var teamAName = document.getElementById('team_a_name').value;
     var teamBName = document.getElementById('team_b_name').value;
     var venue = document.getElementById('venue').value;
@@ -21,11 +23,13 @@ function makePrediction() {
     })
     .then(response => response.json())
     .then(data => {
+        document.getElementById('loadingIcon').style.display = 'none';
         console.log('Success:', data);
         document.getElementById('predictionResult').innerHTML = `Prediction: ${data.confidence}, ${data.outcome}`;
     })
     .catch((error) => {
         console.error('Error:', error);
+        document.getElementById('loadingIcon').style.display = 'none';
     });
 }
 

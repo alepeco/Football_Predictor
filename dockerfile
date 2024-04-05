@@ -7,6 +7,7 @@ WORKDIR /usr/src/app
 # Copy the current directory contents into the container at /usr/src/app
 COPY backend/service.py backend/service.py
 COPY frontend frontend
+COPY model model
 COPY requirements.txt .
 
 # Install any needed packages specified in requirements.txt
@@ -16,7 +17,7 @@ RUN pip install -r requirements.txt
 EXPOSE 5000
 
 # Define environment variable
-ENV FLASK_APP=service.py
+ENV FLASK_APP=backend/service.py
 ENV FLASK_RUN_HOST=0.0.0.0
 
 # Run app.py when the container launches

@@ -7,7 +7,7 @@ from flask import Flask, jsonify, request
 from flask_cors import CORS
 from pathlib import Path
 from flask.helpers import send_file
-import re  # Added for regex matching
+import re 
 from flask import send_from_directory
 
 def load_model_from_blob():
@@ -21,10 +21,8 @@ def load_model_from_blob():
     latest_suffix = -1
     latest_container = None
 
-    # Iterate through all containers and find the one with the highest suffix
     containers = blob_service_client.list_containers(name_starts_with=container_prefix)
     for container in containers:
-        # Use regex to find suffix number
         match = re.search(f"{container_prefix}(\d+)", container['name'])
         if match:
             suffix = int(match.group(1))
@@ -40,20 +38,17 @@ def load_model_from_blob():
     blob_name = "model.pkl"
     blob_client = blob_service_client.get_blob_client(container=latest_container, blob=blob_name)
 
-    # Construct the local path to save the downloaded model
     download_file_path = "model/model.pkl"
     print(f"Downloading model from Blob Storage: {latest_container}/{blob_name} to {download_file_path}")
 
     with open(download_file_path, "wb") as download_file:
         download_file.write(blob_client.download_blob().readall())
 
-    # Load the model from the local file
     with open(download_file_path, 'rb') as model_file:
         model = pickle.load(model_file)
     
     return model
 
-# MongoDB connection and other Flask setup code goes here
 
 app = Flask(__name__)
 CORS(app)
@@ -77,7 +72,6 @@ def predict_match_outcome(team_a_name, team_b_name, upcoming_match_venue):
         print("*** Model loaded ***")
     except Exception as e:
         print(f"Failed to load model from Blob Storage: {e}")
-    # Attempt to load model locally if Azure Blob Storage is not accessible
     try:
         with open('model/model.pkl', 'rb') as file:
             model = pickle.load(file)
@@ -88,7 +82,6 @@ def predict_match_outcome(team_a_name, team_b_name, upcoming_match_venue):
     model = load_model_from_blob()
     print("*** Model loaded ***")
     
-    # Fetch the last record for both teams
     team_a_df = fetch_team_data(team_a_name)
     team_b_df = fetch_team_data(team_b_name)
     
@@ -98,7 +91,6 @@ def predict_match_outcome(team_a_name, team_b_name, upcoming_match_venue):
     team_a_last_record = team_a_df.iloc[-1]
     team_b_last_record = team_b_df.iloc[-1]
     
-    # Prepare the feature vector for prediction
     features_for_prediction = pd.DataFrame([{
         'Total_GF': team_a_last_record['Total_GF'],
         'Total_GA': team_a_last_record['Total_GA'],
@@ -128,34 +120,26 @@ def predict_match_outcome(team_a_name, team_b_name, upcoming_match_venue):
     predicted_points = model.predict(features_for_prediction)
     predicted_probabilities = model.predict_proba(features_for_prediction)
     
-    # Assuming the classes are ordered as [0, 1, 3] for [loss, draw, win]
-    # Extracting the highest probability as confidence
     confidence = max(predicted_probabilities[0])
     
 
-    # Translate predicted points to match outcome
     match_outcome = "draw" if predicted_points == 1 else "win" if predicted_points == 3 else "loss"
-    # Convert confidence to a percentage string with 2 decimal places
     confidence_percentage = f"{confidence * 100:.2f}%"
-    return f"The model predicts a {match_outcome} for {team_a_name} against {team_b_name}.", f"with a confidence level of {confidence_percentage}"
+    return f"the model predicts a {match_outcome} for {team_a_name} against {team_b_name}.", f"With a confidence level of {confidence_percentage}"
     
 @app.route("/")
 def indexPage():
-    # Get the absolute path to your frontend folder
     frontend_dir = os.path.abspath("./frontend")
-    # Serve index.html from the frontend directory
     return send_from_directory(frontend_dir, "index.html")
 
 @app.route("/predict", methods=["POST"])
 def predict():
-    # Fetch data from request
     data = request.get_json()
     team_a_name = data.get("team_a_name")
     team_b_name = data.get("team_b_name")
     venue = data.get("venue")
 
-    # Prediction logic
-    # This should be adapted based on your prediction function
+
     outcome, confidence = predict_match_outcome(team_a_name, team_b_name, venue)
     
     return jsonify({"outcome": outcome, "confidence": confidence})
